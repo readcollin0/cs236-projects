@@ -5,6 +5,7 @@
 #ifndef UNTITLED_AUTOMATAALL_H
 #define UNTITLED_AUTOMATAALL_H
 
+#include <vector>
 #include "Automaton.h"
 
 // Single character matching automaton.

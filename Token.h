@@ -18,10 +18,7 @@ struct Token {
             : type(type), str(str), lineNum(lineNum) {}
 };
 
-std::ostream& operator<<(std::ostream& out, const Token& token) {
-    out << "(" << tokenTypeName(token.type) << ",\"" << token.str << "\"," << token.lineNum << ")";
-    return out;
-}
+std::ostream& operator<<(std::ostream& out, const Token& token);
 
 
 #endif //UNTITLED_TOKEN_H
