@@ -4,6 +4,7 @@
 #include <queue>
 
 #include "Tokenizer.h"
+#include "Parser.h"
 #define _DEBUG 1
 
 using namespace std;
@@ -19,6 +20,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     Tokenizer tokenizer;
+    Parser parser;
 
 #if _DEBUG // If in debug mode, just take input from console, for testing.
     string file, buf;
@@ -29,11 +31,15 @@ int main(int argc, char* argv[]) {
             file += buf + '\n';
             getline(cin, buf);
         }
+
         vector<Token> tokens = tokenizer.parseFile(file);
-        printTokens(tokens);
         removeComments(tokens);
-        cout << endl << endl << tokens.size() << endl << endl;
-        printTokens(tokens);
+
+        try {
+            parser.parse(tokens);
+        } catch (const Token* token) {
+            cout << "Failure!" << endl << token << endl;
+        }
 
         cout << endl << endl;
     }
