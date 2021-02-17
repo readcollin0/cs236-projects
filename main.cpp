@@ -4,13 +4,12 @@
 #include <queue>
 
 #include "Tokenizer.h"
-#define _DEBUG 0
+#define _DEBUG 1
 
 using namespace std;
 
-vector<Automaton*> automata;
-
-void printTokens(vector<Token>& tokens);
+void printTokens(const vector<Token>& tokens);
+void removeComments(vector<Token>& tokens);
 
 int main(int argc, char* argv[]) {
 #if _DEBUG == 0
@@ -32,6 +31,10 @@ int main(int argc, char* argv[]) {
         }
         vector<Token> tokens = tokenizer.parseFile(file);
         printTokens(tokens);
+        removeComments(tokens);
+        cout << endl << endl << tokens.size() << endl << endl;
+        printTokens(tokens);
+
         cout << endl << endl;
     }
 #else
@@ -46,9 +49,18 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void printTokens(vector<Token>& tokens) {
+void printTokens(const vector<Token>& tokens) {
     for (size_t i = 0; i < tokens.size(); i++) {
         cout << tokens[i] << endl;
     }
     cout << "Total Tokens = " << tokens.size();
+}
+
+void removeComments(vector<Token>& tokens) {
+    auto iter = tokens.begin();
+    while (iter != tokens.end()) {
+        if ((*iter).type == TokenType::COMMENT)
+            iter = tokens.erase(iter);
+        iter++;
+    }
 }

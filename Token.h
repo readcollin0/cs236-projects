@@ -7,7 +7,29 @@
 
 #include <string>
 #include <iostream>
-#include "TokenType.h"
+
+enum class TokenType {
+    COMMA,
+    PERIOD,
+    Q_MARK,
+    LEFT_PAREN,
+    RIGHT_PAREN,
+    COLON,
+    COLON_DASH,
+    MULTIPLY,
+    ADD,
+    SCHEMES,
+    FACTS,
+    RULES,
+    QUERIES,
+    ID,
+    STRING,
+    COMMENT,
+    UNDEFINED,
+    MY_EOF
+};
+
+const char* tokenTypeName(TokenType type);
 
 struct Token {
     TokenType type;
