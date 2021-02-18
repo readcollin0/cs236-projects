@@ -37,8 +37,10 @@ int main(int argc, char* argv[]) {
 
         try {
             parser.parse(tokens);
+            cout << "Success!" << endl;
+            cout << parser.getDatalog() << endl;
         } catch (const Token* token) {
-            cout << "Failure!" << endl << token << endl;
+            cout << "Failure!" << endl << "  " << *token << endl;
         }
 
         cout << endl << endl;

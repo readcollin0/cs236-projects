@@ -5,15 +5,33 @@
 #ifndef UNTITLED_PARSER_H
 #define UNTITLED_PARSER_H
 
-#include <iostream>
+#include <set>
 #include <vector>
 #include "Token.h"
+#include "ProgramData.h"
 
 
 class Parser {
+public:
+    bool parse(const std::vector<Token>& tokens) {
+        currentLocation = 0;
+        this->tokens = &tokens;
+
+        if (datalog) delete datalog;
+        datalog = new Datalog();
+
+        parseDatalogProgram();
+        return true;
+    }
+
+    const Datalog& getDatalog() {
+        return *datalog;
+    }
+
 private:
     int currentLocation = 0;
     const std::vector<Token>* tokens = nullptr;
+    Datalog* datalog = nullptr;
 
     TokenType getNextType() const {
         return tokens->at(currentLocation).type;
@@ -23,114 +41,148 @@ private:
      * All these parse functions are the same idea. They parse the given thing.
      * They return false if there was a problem and true if success.
      */
-    void adpop(TokenType type) {
+    const Token& adpop(TokenType type) {
         if (tokens->at(currentLocation).type == type) {
             currentLocation++;
+            const Token& token = tokens->at(currentLocation - 1);
+            if (type == TokenType::STRING) {
+                datalog->addToDomain(token.str);
+            }
+            return token;
         }
         else {
             throw &(tokens->at(currentLocation));
         }
     }
 
-    void parseOperator() {
-        if (getNextType() == TokenType::ADD)
+    std::string parseOperator() {
+        if (getNextType() == TokenType::ADD) {
             adpop(TokenType::ADD);
-        else
+            return "+";
+        }
+        else {
             adpop(TokenType::MULTIPLY);
-    }
-
-    void parseParameter() {
-        switch (getNextType()){
-            case TokenType::STRING:
-                adpop(TokenType::STRING);
-                return;
-            case TokenType::ID:
-                adpop(TokenType::ID);
-                return;
-            default: parseExpression();
+            return "*";
         }
     }
 
-    void parseExpression() {
+    std::string parseParameter() {
+        switch (getNextType()){
+            case TokenType::STRING:
+                return adpop(TokenType::STRING).str;
+            case TokenType::ID:
+                return adpop(TokenType::ID).str;
+            default: return parseExpression();
+        }
+    }
+
+    std::string parseExpression() {
+        std::string expr;
+        expr += adpop(TokenType::LEFT_PAREN).str;
+        expr += parseParameter();
+        expr += parseOperator();
+        expr += parseParameter();
+        expr += adpop(TokenType::RIGHT_PAREN).str;
+        return expr;
+    }
+
+    void parseIDList(std::vector<std::string>& ids) {
+        if (getNextType() == TokenType::RIGHT_PAREN) return;
+        adpop(TokenType::COMMA);
+        ids.push_back(adpop(TokenType::ID).str);
+        parseIDList(ids);
+    }
+
+    void parseStringList(std::vector<std::string>& strings) {
+        if (getNextType() == TokenType::RIGHT_PAREN) return;
+        adpop(TokenType::COMMA);
+        strings.push_back(adpop(TokenType::STRING).str);
+        parseStringList(strings);
+    }
+
+    void parseParameterList(std::vector<std::string>& params) {
+        if (getNextType() == TokenType::RIGHT_PAREN) return;
+        adpop(TokenType::COMMA);
+        params.push_back(parseParameter());
+        parseParameterList(params);
+    }
+
+    Scheme parsePredicate() {
+        Scheme predicate = Scheme(adpop(TokenType::ID).str);
+        std::vector<std::string> params;
+
         adpop(TokenType::LEFT_PAREN);
-        parseParameter();
-        parseOperator();
-        parseParameter();
+        params.push_back(parseParameter());
+        parseParameterList(params);
         adpop(TokenType::RIGHT_PAREN);
+
+        predicate.addParameters(params);
+        return predicate;
     }
 
-    void parseIDList() {
-        if (getNextType() == TokenType::RIGHT_PAREN) return;
-        adpop(TokenType::COMMA);
-        adpop(TokenType::ID);
-        parseIDList();
-    }
-
-    void parseStringList() {
-        if (getNextType() == TokenType::RIGHT_PAREN) return;
-        adpop(TokenType::COMMA);
-        adpop(TokenType::STRING);
-        parseStringList();
-    }
-
-    void parseParameterList() {
-        if (getNextType() == TokenType::RIGHT_PAREN) return;
-        adpop(TokenType::COMMA);
-        parseParameter();
-        parseParameterList();
-    }
-
-    void parsePredicate() {
-        adpop(TokenType::ID);
-        adpop(TokenType::LEFT_PAREN);
-        parseParameter();
-        parseParameterList();
-        adpop(TokenType::RIGHT_PAREN);
-    }
-
-    void parsePredicateList() {
+    void parsePredicateList(std::vector<Scheme>& predicates) {
         if (getNextType() == TokenType::PERIOD) return;
         adpop(TokenType::COMMA);
-        parsePredicate();
-        parsePredicateList();
+        predicates.push_back(parsePredicate());
+        parsePredicateList(predicates);
     }
 
-    void parseHeadPredicate() {
-        adpop(TokenType::ID);
+    Scheme parseHeadPredicate() {
+        Scheme predicate(adpop(TokenType::ID).str);
+        std::vector<std::string> ids;
+
         adpop(TokenType::LEFT_PAREN);
         adpop(TokenType::ID);
-        parseIDList();
+        parseIDList(ids);
         adpop(TokenType::RIGHT_PAREN);
+
+        predicate.addParameters(ids);
+        return predicate;
     }
 
     void parseQuery() {
-        parsePredicate();
+        datalog->addQuery(parsePredicate());
         adpop(TokenType::Q_MARK);
     }
 
     void parseRule() {
-        parseHeadPredicate();
+        Rule rule = Scheme(parseHeadPredicate());
+        std::vector<Scheme> predicates;
+
         adpop(TokenType::COLON_DASH);
-        parsePredicate();
-        parsePredicateList();
+        predicates.push_back(parsePredicate());
+        parsePredicateList(predicates);
         adpop(TokenType::PERIOD);
+
+        rule.addPredicates(predicates);
+        datalog->addRule(rule);
     }
 
     void parseFact() {
-        adpop(TokenType::ID);
+        Scheme fact = Scheme(adpop(TokenType::ID).str);
+        std::vector<std::string> params;
+
         adpop(TokenType::LEFT_PAREN);
-        adpop(TokenType::STRING);
-        parseStringList();
+        params.push_back(adpop(TokenType::STRING).str);
+        parseStringList(params);
         adpop(TokenType::RIGHT_PAREN);
         adpop(TokenType::PERIOD);
+
+        fact.addParameters(params);
+        datalog->addFact(fact);
     }
 
     void parseScheme() {
-        adpop(TokenType::ID);
+        Scheme scheme = Scheme(adpop(TokenType::ID).str);
+        std::vector<std::string> parameters;
+
         adpop(TokenType::LEFT_PAREN);
-        adpop(TokenType::ID);
-        parseIDList();
+        parameters.push_back(adpop(TokenType::ID).str);
+        parseIDList(parameters);
         adpop(TokenType::RIGHT_PAREN);
+
+        scheme.addParameters(parameters);
+        datalog->addScheme(scheme);
     }
 
     void parseQueryList() {
@@ -173,14 +225,6 @@ private:
         parseQuery();
         parseQueryList();
         adpop(TokenType::MY_EOF);
-    }
-
-public:
-    bool parse(const std::vector<Token>& tokens) {
-        currentLocation = 0;
-        this->tokens = &tokens;
-        parseDatalogProgram();
-        return true;
     }
 };
 
