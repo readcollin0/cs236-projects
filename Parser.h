@@ -32,6 +32,7 @@ private:
     int currentLocation = 0;
     const std::vector<Token>* tokens = nullptr;
     Datalog* datalog = nullptr;
+    bool addToDomain = false;
 
     TokenType getNextType() const {
         return tokens->at(currentLocation).type;
@@ -43,9 +44,8 @@ private:
      */
     const Token& adpop(TokenType type) {
         if (tokens->at(currentLocation).type == type) {
-            currentLocation++;
-            const Token& token = tokens->at(currentLocation - 1);
-            if (type == TokenType::STRING) {
+            const Token& token = tokens->at(currentLocation++);
+            if (type == TokenType::STRING && addToDomain) {
                 datalog->addToDomain(token.str);
             }
             return token;
@@ -132,7 +132,7 @@ private:
         std::vector<std::string> ids;
 
         adpop(TokenType::LEFT_PAREN);
-        adpop(TokenType::ID);
+        ids.push_back(adpop(TokenType::ID).str);
         parseIDList(ids);
         adpop(TokenType::RIGHT_PAREN);
 
@@ -210,6 +210,7 @@ private:
     }
 
     void parseDatalogProgram() {
+        addToDomain = true;
         adpop(TokenType::SCHEMES);
         adpop(TokenType::COLON);
         parseScheme();
@@ -220,6 +221,7 @@ private:
         adpop(TokenType::RULES);
         adpop(TokenType::COLON);
         parseRuleList();
+        addToDomain = false;
         adpop(TokenType::QUERIES);
         adpop(TokenType::COLON);
         parseQuery();

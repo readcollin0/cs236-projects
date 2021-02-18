@@ -149,9 +149,13 @@ public:
         for (Scheme query : datalog.queries)
             out << "  " << query << "?" << std::endl;
 
-        out << "Domain(" << datalog.domain.size() << "):" << std::endl;
-        for (std::string str : datalog.domain)
-            out << "  " << str << std::endl;
+        out << "Domain(" << datalog.domain.size() << "):";
+        if (datalog.domain.size() > 0) {
+            auto iter = datalog.domain.begin();
+            while (iter != datalog.domain.end()) {
+                out << std::endl << "  " << *iter++;
+            }
+        }
 
         return out;
     }

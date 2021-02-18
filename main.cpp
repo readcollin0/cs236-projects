@@ -9,52 +9,56 @@
 
 using namespace std;
 
+Tokenizer tokenizer;
+Parser parser;
+
+void processFile(const std::string& file);
 void printTokens(const vector<Token>& tokens);
 void removeComments(vector<Token>& tokens);
 
 int main(int argc, char* argv[]) {
-#if _DEBUG == 0
-    if (argc != 2) return 1;
-    ifstream in(argv[1]);
-    if (!in) return 2;
-#endif
+    bool useStdIn = (argc == 1);
 
-    Tokenizer tokenizer;
-    Parser parser;
-
-#if _DEBUG // If in debug mode, just take input from console, for testing.
-    string file, buf;
-    while (true) {
-        file = "";
-        getline(cin, buf);
-        while (buf.length() != 0) {
-            file += buf + '\n';
+    if (useStdIn) {
+        string file, buf;
+        while (true) {
+            file = "";
             getline(cin, buf);
+            while (buf.length() != 0) {
+                file += buf + '\n';
+                getline(cin, buf);
+            }
+            processFile(file);
+            cout << endl << endl;
         }
-
-        vector<Token> tokens = tokenizer.parseFile(file);
-        removeComments(tokens);
-
-        try {
-            parser.parse(tokens);
-            cout << "Success!" << endl;
-            cout << parser.getDatalog() << endl;
-        } catch (const Token* token) {
-            cout << "Failure!" << endl << "  " << *token << endl;
-        }
-
-        cout << endl << endl;
     }
-#else
-    ostringstream oss;
-    oss << in.rdbuf();
-    string file = oss.str();
+    else {
+        if (argc != 2) return 1;
+        ifstream in(argv[1]);
+        if (!in) return 2;
 
-    vector<Token> tokens = tokenizer.parseFile(file);
-    printTokens(tokens);
-#endif
+        ostringstream oss;
+        oss << in.rdbuf();
+        string file = oss.str();
+
+        processFile(file);
+    }
+
 
     return 0;
+}
+
+void processFile(const std::string& file) {
+    vector<Token> tokens = tokenizer.parseFile(file);
+    removeComments(tokens);
+
+    try {
+        parser.parse(tokens);
+        cout << "Success!" << endl;
+        cout << parser.getDatalog() << endl;
+    } catch (const Token* token) {
+        cout << "Failure!" << endl << "  " << *token << endl;
+    }
 }
 
 void printTokens(const vector<Token>& tokens) {
@@ -69,6 +73,7 @@ void removeComments(vector<Token>& tokens) {
     while (iter != tokens.end()) {
         if ((*iter).type == TokenType::COMMENT)
             iter = tokens.erase(iter);
-        iter++;
+        else
+            iter++;
     }
 }
